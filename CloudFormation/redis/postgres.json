@@ -1,0 +1,94 @@
+{
+  "AWSTemplateFormatVersion":"2010-09-09",
+  "Description":"AWS CloudFormation Template for PostgresSQL creation with read-replica database",
+  "Parameters":{
+    "DBUsername":{
+      "Type":"String",
+      "Description":"Username to login to DB",
+      "Default" : "usernameChangeMe"
+    },
+    "DBUserPassword":{
+      "Type":"String",
+      "Description":"Password to login to DB",
+      "Default" : "passwordChangeMe" 
+    },
+    "RDSsubnetGroup":{
+      "Type":"CommaDelimitedList",
+      "Description":"A Subnet Group or a collection of subnets for RDS and in this case PostgresSQL database, should be in same vpc"
+    },
+    "RDSsecurityGroup":{
+      "Type":"String",
+      "Description":"Security Group for PostgreSQL database"
+    },
+    "RDSInstanceType":{
+      "Type":"String",
+      "Description":"Instace type for PostgreSQL database",
+      "Default" : "db.m4.xlarge" 
+    },
+    "DBStorage":{
+      "Type":"String",
+      "Description":"Storage Space for PostgreSQL database",
+      "Default" : "100" 
+    },
+    "DBVersion":{
+      "Type":"String",
+      "Description":"Version number for PostgreSQL database",
+      "Default" : "9.6.1" 
+    }
+  },
+  "Resources":{
+    "MyDBSubnetGroup":{
+      "Type":"AWS::RDS::DBSubnetGroup",
+      "Properties":{
+        "DBSubnetGroupDescription":"Subnets available for the RDS DB Instance",
+        "SubnetIds":{
+          "Ref":"RDSsubnetGroup"
+        }
+      }
+    },  
+    "PostgresSQL": {
+        "Type" : "AWS::RDS::DBInstance",
+        "Properties" : {
+          "AllocatedStorage" : {"Ref" : "DBStorage"},
+          "AutoMinorVersionUpgrade" : "True",
+          "BackupRetentionPeriod" : "30",
+          "CopyTagsToSnapshot" : "True",
+          "DBInstanceClass" : { "Ref" : "RDSInstanceType" },
+          "DBInstanceIdentifier" : "dbPOSTGRESSQL",
+          "DBName" : "dbPOSTGRESSQL",
+          "DBSubnetGroupName" : { "Ref" : "MyDBSubnetGroup" },
+          "Engine" : "postgres",
+          "EngineVersion" : {"Ref" : "DBVersion"},
+          "MasterUsername" : { "Ref" : "DBUsername" },
+          "MasterUserPassword" : { "Ref" : "DBUserPassword" },
+          "MultiAZ" : "True",
+          "Port" : "5432",
+          "PreferredBackupWindow" : "03:00-05:00",
+          "PreferredMaintenanceWindow" : "sun:00:00-sun:02:00",
+          "Tags" : [{"Key" : "Name", "Value" : "dbPOSTGRESSQL"}],
+          "VPCSecurityGroups" : [ { "Ref" : "RDSsecurityGroup" }]
+        }
+    },
+    "PostgresSQLReadReplica": {
+      "DependsOn": [
+      "PostgresSQL"
+      ],
+        "Type" : "AWS::RDS::DBInstance",
+        "Properties" : {  
+          "AllocatedStorage" : {"Ref" : "DBStorage"},
+          "AutoMinorVersionUpgrade" : "True",
+          "CopyTagsToSnapshot" : "True",
+          "DBInstanceClass" : { "Ref" : "RDSInstanceType" },
+          "DBInstanceIdentifier" : "dbPOSTGRESSQLReadReplica",
+          "DBName" : "dbPOSTGRESSQLReadReplica",
+          "Engine" : "postgres",
+          "EngineVersion" : {"Ref" : "DBVersion"},
+          "Port" : "5432",
+          "PreferredMaintenanceWindow" : "sun:00:00-sun:02:00",
+          "SourceDBInstanceIdentifier" : "dbPOSTGRESSQL",
+          "Tags" : [{"Key" : "Name", "Value" : "dbPOSTGRESSQL"}],
+          "VPCSecurityGroups" : [ { "Ref" : "RDSsecurityGroup" }]
+        }        
+    }
+  }
+}
