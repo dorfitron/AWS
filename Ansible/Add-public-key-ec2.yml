@@ -1,0 +1,39 @@
+---
+- name: create user and add ssh public key to target host group
+  hosts: hostgroup:hostgroup2
+  remote_user: ec2-user
+  become: true
+  vars:
+    username: "John Doe"
+    user_public_key: "JohnDoe.pub"
+
+  tasks:
+  - name: create user on remote host and ssh directory
+    command: useradd {{ username }}
+
+  - name: add user to ssh users group to allow user to ssh to the node
+    command: usermod -aG sshusers {{ username }}
+
+  - name: create ssh folder
+    file: path=/home/{{ username }}/.ssh/ state=directory
+
+  - name: create authorized keys file
+    file: path=/home/{{ username }}/.ssh/authorized_keys state=touch
+
+  - name: change authorized key file permissions
+    file: path=/home/{{ username }}/.ssh/authorized_keys owner={{ username }} group={{ username }} mode=0600
+
+  - name: create known hosts file
+    file: path=/home/{{ username }}/.ssh/known_hosts state=touch
+
+  - name: change known hosts file permissions
+    file: path=/home/{{ username }}/.ssh/known_hosts owner={{ username }} group={{ username }} mode=0600
+
+  - name: copy ssh key to ssh user folder
+    copy: src=/etc/ansible/{{ user_public_key }} dest=/home/{{ username }}/.ssh/
+
+  - name: copy ssh key in ssh folder to authorized keys file
+    shell: cat /home/{{ username }}/.ssh/{{ user_public_key }} >> /home/{{ username }}/.ssh/authorized_keys
+
+  - name: add users to sudo group
+    command: usermod -aG wheel {{ username }}
